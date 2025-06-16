@@ -19,14 +19,14 @@ mksc --version
 
 **The actual usage** of the program is as follows:
 ```bash
-mksc <file> [output file] [--icon]
+mksc <file> [output file] [options]
 ```
 
 This means you can simply run (for example):
 ```bash
 mksc cat.png
 ```
-...and this will generate a cat.desktop file which is a shortcut to cat.png, clicking on it in a GUI file manager for example will open the cat.png file. If you had wanted the shortcut to be called just "kitten" for example, you could've ran `mksc cat.png kitten`. Now if you wanted that shortcut to have the firefox icon for some reason, you could just add `--icon firefox` to the end.
+...and this will generate a cat.desktop file which is a shortcut to cat.png, clicking on it in a GUI file manager for example will open the cat.png file. If you had wanted the shortcut to be called just "kitten" for example, you could've ran `mksc cat.png kitten`. Now if you wanted that shortcut to have the firefox icon for some reason, you could just add `--icon firefox` to the end. If a file called `kitten` already exists though, you can add `--overwrite` if you're sure you don't need that file. You can also add `--desktop` to create the shortcut directly onto your desktop.
 
 ## Installation
 You can just download a prebuilt binary from the releases and put it in a location like `/usr/local/bin` if you're on a supported platform (`linux_x64` or `linux_arm64`).
