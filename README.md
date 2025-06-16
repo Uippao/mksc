@@ -44,3 +44,28 @@ chmod +x build.kts
 ./build.kts
 ```
 3. Move the binary to a location in your path (A recommended one would be `/usr/local/bin`).
+
+## Desktop Integration
+In case you want some use of it, there is in fact a way to use this to add some functionality to your graphical desktop with relative ease. Namely, you can add some context menu actions kind of like how you can add shortcuts to desktop on Windows. The process depends on your DE, but as a KDE user, I'll provide instructions for that, and may add more later if I feel like it.
+### KDE
+1. Make a new file called `mksc.desktop` into `~/.local/share/kio/servicemenus/`
+2. Inside the file, paste the following:
+```ini
+[Desktop Entry]
+Type=Service
+X-KDE-ServiceTypes=KonqPopupMenu/Plugin
+MimeType=inode/directory;application/octet-stream;application/x-executable;application/x-desktop;image/*;video/*;text/*;
+Actions=CreateShortcut;CreateDesktopShortcut;
+X-KDE-Priority=TopLevel
+
+[Desktop Action CreateShortcut]
+Name=Create Shortcut Here
+Icon=insert-link
+Exec=sh -c 'mksc "%f" && chmod +x "$(basename "%f").desktop"'
+
+[Desktop Action CreateDesktopShortcut]
+Name=Add Shortcut to Desktop
+Icon=user-desktop
+Exec=sh -c 'mksc "%f" --desktop && chmod +x ~/Desktop/"$(basename "%f").desktop"'
+```
+3. Open a terminal in the folder and make the file executable with `chmod +x mksc.desktop`
