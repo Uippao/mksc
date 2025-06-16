@@ -13,13 +13,24 @@ fun printHelp() {
     -h, --help       Show this help message
     -v, --version    Show version info
     -i, --icon       Specify custom icon name or path
+    -o, --overwrite  Overwrite existing files
+    -d, --desktop    Create shortcut on the desktop
     """.trimIndent())
 }
 
 fun printVersion() {
     println("mksc - Simple utility for creating shortcuts on Linux")
-    println("v1.0.0")
+    println("v1.1.0")
     println("https://github.com/Uippao/mksc")
+}
+
+fun getDesktopPath(): String? {
+    // Try XDG_DESKTOP_DIR first
+    getenv("XDG_DESKTOP_DIR")?.toKString()?.takeIf { it.isNotEmpty() }?.let { return it }
+
+    // Then try HOME/Desktop
+    val home = getenv("HOME")?.toKString() ?: return null
+    return "$home/Desktop"
 }
 
 fun runCommand(command: String): String? {
@@ -108,46 +119,66 @@ if (startsWith('.')) removePrefix(".") else this
         }
 
         val iconIdx = args.indexOfFirst { it == "-i" || it == "--icon" }
+        val overwriteIdx = args.indexOfFirst { it == "-o" || it == "--overwrite" }
+        val desktopIdx = args.indexOfFirst { it == "-d" || it == "--desktop" }
         val customIcon = iconIdx.takeIf { it != -1 }?.let { args.getOrNull(it + 1) }
-        val positional = if (iconIdx != -1)
-        args.filterIndexed { i, _ -> i != iconIdx && i != iconIdx + 1 }
-        else
-            args.toList()
 
-
-        if (positional.isEmpty()) {
-            println("Error: Missing target path")
-            return
+        val removeIndices = mutableSetOf<Int>()
+        if (iconIdx != -1) {
+            removeIndices.add(iconIdx)
+            removeIndices.add(iconIdx + 1)
         }
+        if (overwriteIdx != -1) removeIndices.add(overwriteIdx)
+            if (desktopIdx != -1) removeIndices.add(desktopIdx)
 
-        val rawTarget = positional[0]
-        val target = realpath(rawTarget, null)?.toKString()
-        ?: run { println("Error: Invalid target"); return }
-        if (!fileExists(target)) {
-            println("Error: Target not found: $rawTarget")
-            return
-        }
+                val positional = args.filterIndexed { i, _ -> i !in removeIndices }
 
-        val outputArg = positional.getOrNull(1)
-        val baseNameRaw = getFileNameWithoutExtension(target)
-        val baseName = outputArg?.let { baseNameRaw } ?: baseNameRaw.removePrefixIfHidden()
-        val output = outputArg ?: "$baseName.desktop"
-        if (fileExists(output)) {
-            println("Error: Output exists: $output")
-            return
-        }
+                if (positional.isEmpty()) {
+                    println("Error: Missing target path")
+                    return
+                }
 
-        val isDesktop = target.endsWith(".desktop", ignoreCase = true)
-        val isDir = isDirectory(target)
+                val rawTarget = positional[0]
+                val target = realpath(rawTarget, null)?.toKString()
+                ?: run { println("Error: Invalid target"); return }
+                if (!fileExists(target)) {
+                    println("Error: Target not found: $rawTarget")
+                    return
+                }
 
-        when {
-            isDesktop -> makeDesktopShortcut(target, output, customIcon)
-            isDir     -> makeFolderShortcut(target, output, customIcon)
-            else      -> makeAppShortcut(target, output, customIcon)
-        }
+                val outputArg = positional.getOrNull(1)
+                val baseNameRaw = getFileNameWithoutExtension(target)
+                val baseName = outputArg?.let { baseNameRaw } ?: baseNameRaw.removePrefixIfHidden()
+                var output = outputArg ?: "$baseName.desktop"
 
-        chmod755(output)
-        println("Shortcut created: $output")
+                // Handle --desktop flag
+                if (desktopIdx != -1) {
+                    val desktopPath = getDesktopPath() ?: run {
+                        println("Error: Could not determine desktop directory")
+                        return
+                    }
+                    val fileName = output.substringAfterLast('/')
+                    output = "$desktopPath/$fileName"
+                }
+
+                val overwrite = overwriteIdx != -1
+                if (!overwrite && fileExists(output)) {
+                    println("Error: Output exists: $output")
+                    println("Consider using the --overwrite option")
+                    return
+                }
+
+                val isDesktop = target.endsWith(".desktop", ignoreCase = true)
+                val isDir = isDirectory(target)
+
+                when {
+                    isDesktop -> makeDesktopShortcut(target, output, customIcon)
+                    isDir     -> makeFolderShortcut(target, output, customIcon)
+                    else      -> makeAppShortcut(target, output, customIcon)
+                }
+
+                chmod755(output)
+                println("Shortcut created: $output")
     }
 
     fun makeDesktopShortcut(src: String, dst: String, icon: String?) {
